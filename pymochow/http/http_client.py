@@ -16,6 +16,7 @@ This module provide http request function for bce services.
 from future.utils import iteritems, iterkeys, itervalues
 from builtins import str, bytes
 import logging
+import math
 import sys
 import time
 import traceback
@@ -211,16 +212,18 @@ class HTTPClient:
 
                 if retries_attempted > 0 and offset is not None:
                     body.seek(offset)
+                
+                timeout_in_s = math.ceil(config.connection_timeout_in_mills / 1000)
                 if http_method == http_methods.POST:
                     http_response = self.session.post(url, data=body,
                             params=params,
                             headers=headers,
-                            timeout=config.connection_timeout_in_mills)
+                            timeout=timeout_in_s)
                 elif http_method == http_methods.DELETE:
                     http_response = self.session.delete(url, data=body,
                             params=params,
                             headers=headers,
-                            timeout=config.connection_timeout_in_mills)
+                            timeout=timeout_in_s)
                 else:
                     raise ClientError(message="Http method {} not supported.".format(http_method))
 
