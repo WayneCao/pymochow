@@ -272,6 +272,7 @@ class RequestType(Enum):
     BATCH_QUERY = "batchQuery"
     SEARCH = "search"
     BATCH_SEARCH = "batchSearch"
+    MULTI_VECTOR_SEARCH = "multiVectorSearch"
     CREATE = "create"
     DROP = "drop"
     ALIAS = "alias"

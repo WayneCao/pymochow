@@ -32,7 +32,8 @@ from pymochow.model.schema import (
     InvertedIndex,
     InvertedIndexParams,
     InvertedIndexAnalyzer,
-    InvertedIndexParseMode
+    InvertedIndexParseMode,
+    FusionRankPolicy,
 )
 from pymochow.model.enum import (PartitionType, ReadConsistency,
     IndexType, IndexState, MetricType, AutoBuildPolicyType, RequestType)
@@ -280,6 +281,51 @@ class VectorRangeSearchRequest(SearchRequest):
         return RequestType.SEARCH
 
 
+SingleVectorSearchRequest = Union[VectorTopkSearchRequest,
+                                  VectorRangeSearchRequest]
+
+
+class MultiVectorSearchRequest(SearchRequest):
+    """ multi vector search request """
+
+    def __init__(self, *,
+                 requests: List[SingleVectorSearchRequest],
+                 ranking: FusionRankPolicy,
+                 limit: int = None,
+                 filter: str = None):
+        """init
+        Each subrequest in 'requests' could set its own 'limit'.
+
+        However, 'filter' is global setting, and it will apply to all
+        the subrequests. Avoid setting them in the subrequests, or
+        thoes settings will be overriden by the global setting.
+
+        """
+        self._requests = requests
+        self._ranking = ranking
+        self._limit = limit
+        self._filter = filter
+
+    def to_dict(self):
+        """to_dict"""
+        res = dict()
+
+        res["search"] = [r.to_dict()["anns"] for r in self._requests]
+
+        if self._filter is not None:
+            res["filter"] = self._filter
+        if self._limit is not None:
+            res["limit"] = self._limit
+        if self._ranking is not None:
+            res["ranking"] = self._ranking.to_dict()
+
+        return res
+
+    def type(self):
+        """type"""
+        return RequestType.MULTI_VECTOR_SEARCH
+
+
 class VectorBatchSearchRequest(SearchRequest):
     """batch search request"""
 
@@ -344,6 +390,12 @@ class VectorBatchSearchRequest(SearchRequest):
         return RequestType.BATCH_SEARCH
 
 
+VectorSearchRequest = Union[VectorTopkSearchRequest,
+                            VectorRangeSearchRequest,
+                            VectorBatchSearchRequest,
+                            MultiVectorSearchRequest]
+
+
 class BM25SearchRequest(SearchRequest):
     """BM25 search request"""
 
@@ -380,16 +432,13 @@ class BM25SearchRequest(SearchRequest):
         return RequestType.SEARCH
 
 
-VectorSearchRequest = Union[VectorTopkSearchRequest,
-                            VectorRangeSearchRequest,
-                            VectorBatchSearchRequest]
-
-
 class HybridSearchRequest(SearchRequest):
     """Hybrid BM25 and vector search."""
 
     def __init__(self, *,
-                 vector_request: VectorSearchRequest,
+                 vector_request: Union[VectorTopkSearchRequest,
+                                       VectorRangeSearchRequest,
+                                       VectorBatchSearchRequest],
                  bm25_request: BM25SearchRequest,
                  vector_weight: float = 0.5,
                  bm25_weight: float = 0.5,
