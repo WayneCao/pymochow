@@ -519,3 +519,33 @@ class Schema:
             for index in self.indexes:
                 res["indexes"].append(index.to_dict())
         return res
+
+
+class FusionRankPolicy:
+    '''concrete impletations are RRFRank and WeightedRank'''
+
+
+class RRFRank(FusionRankPolicy):
+    def __init__(self, k: int):
+        self._k = k
+
+    def to_dict(self):
+        return {
+            "strategy": "rrf",
+            "params": {
+                "k": self._k
+            }
+        }
+
+
+class WeightedRank(FusionRankPolicy):
+    def __init__(self, weights: List[float]):
+        self._weights = weights
+
+    def to_dict(self):
+        return {
+            "strategy": "ws",
+            "params": {
+                "weights": self._weights
+            }
+        }
