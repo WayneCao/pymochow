@@ -34,7 +34,9 @@ from pymochow.model.schema import (
     PUCKParams,
     AutoBuildTiming,
     InvertedIndex,
-    InvertedIndexParams
+    InvertedIndexParams,
+    RRFRank,
+    WeightedRank
 )
 from pymochow.model.enum import (
     FieldType, ElementType, IndexType, InvertedIndexAnalyzer, InvertedIndexParseMode, MetricType, ServerErrCode,
@@ -50,6 +52,7 @@ from pymochow.model.table import (
     VectorTopkSearchRequest,
     VectorRangeSearchRequest,
     VectorBatchSearchRequest,
+    MultiVectorSearchRequest,
     BM25SearchRequest,
     HybridSearchRequest
 )
@@ -299,6 +302,31 @@ class TestMochow:
                                                config=VectorSearchConfig(search_coarse_count=5))
         res = table.vector_search(request=request)
         logger.debug("batch search res: {}".format(res))
+
+        # multi-vector search
+        if self._vector_index_type == IndexType.HNSW or self._vector_index_type == IndexType.HNSWPQ:
+            config=VectorSearchConfig(ef=200)
+        elif self._vector_index_type == IndexType.PUCK:
+            config=VectorSearchConfig(search_coarse_count=5)
+
+        # in real world senario, you should use vectors in different vector fields
+        requests = [
+            VectorTopkSearchRequest(vector_field="vector",
+                                    vector=FloatVector([1, 0.21, 0.213, 0]),
+                                    limit=10,
+                                    config=config),
+            VectorTopkSearchRequest(vector_field="vector",
+                                    vector=FloatVector([1, 0.21, 0.213, 0]),
+                                    limit=10,
+                                    config=config)
+        ]
+        request = MultiVectorSearchRequest(requests=requests,
+                                           ranking=RRFRank(60),
+                                           limit=10, filter="bookName='三国演义'")
+
+        res = table.vector_search(request=request, projections=["id"])
+        logger.debug("multi vector search res: {}".format(res))
+
 
     def bm25_search(self):
         """bm25 search"""
