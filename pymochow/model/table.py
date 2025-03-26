@@ -37,7 +37,7 @@ from pymochow.model.schema import (
     FusionRankPolicy,
 )
 from pymochow.model.enum import (PartitionType, ReadConsistency,
-    IndexType, IndexState, MetricType, AutoBuildPolicyType, RequestType)
+    IndexType, IndexState, MetricType, AutoBuildPolicyType, RequestType, FilterMode)
 from pymochow.exception import ClientError
 
 class Partition:
@@ -214,6 +214,24 @@ class BatchQueryKey:
         return res
 
 
+class AdvancedOptions:
+    """AdvancedOptions"""
+
+    def __init__(self,
+                 accept_partial_success_on_mpp: bool = False,
+                 success_rate_lower_bound_on_mpp: float = 1.0):
+        """init"""
+        self._accept_partial_success_on_mpp = accept_partial_success_on_mpp
+        self._success_rate_lower_bound_on_mpp = success_rate_lower_bound_on_mpp
+
+    def to_dict(self):
+        """to_dict"""
+        res = {}
+        res['acceptPartialSuccessOnMPP'] = self._accept_partial_success_on_mpp
+        res['successRateLowerBoundOnMPP'] = self._success_rate_lower_bound_on_mpp
+        return res
+
+
 class VectorSearchConfig:
     """
     Optional configurable params for vector search.
@@ -232,11 +250,15 @@ class VectorSearchConfig:
     def __init__(self, *,
                  ef: int = None,
                  pruning: bool = None,
-                 search_coarse_count: int = None):
+                 search_coarse_count: int = None,
+                 filter_mode: FilterMode = FilterMode.AUTO,
+                 post_filter_amplification_factor: float = None):
         """init"""
         self._ef = ef
         self._pruning = pruning
         self._search_coarse_count = search_coarse_count
+        self._filter_mode = filter_mode
+        self._post_filter_amplification_factor = post_filter_amplification_factor
 
     def to_dict(self):
         """to_dict"""
@@ -247,6 +269,10 @@ class VectorSearchConfig:
             res['pruning'] = self._pruning
         if self._search_coarse_count is not None:
             res['searchCoarseCount'] = self._search_coarse_count
+        if self._filter_mode is not None:
+            res['filterMode'] = self._filter_mode
+        if self._post_filter_amplification_factor is not None:
+            res['postFilterAmplificationFactor'] = self._post_filter_amplification_factor
         return res
 
 
@@ -271,13 +297,15 @@ class VectorTopkSearchRequest(SearchRequest):
                  vector: Vector = None,
                  limit: int = 50,
                  filter: str = None,
-                 config: VectorSearchConfig = None):
+                 config: VectorSearchConfig = None,
+                 advanced_options: AdvancedOptions = None):
         """init"""
         self._vector_field = vector_field
         self._vector = vector
         self._limit = limit
         self._filter = filter
         self._config = config
+        self._advanced_options = advanced_options
     
     @property
     def vector(self):
@@ -315,6 +343,10 @@ class VectorTopkSearchRequest(SearchRequest):
             anns["params"] = params
 
         res["anns"] = anns
+
+        if self._advanced_options is not None:
+            res["advancedOptions"] = self._advanced_options.to_dict()
+
         return res
 
     def type(self):

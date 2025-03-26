@@ -59,10 +59,12 @@ class InvertedIndexParseMode(Enum):
     FINE_MODE = "FINE_MODE"
 
 
+@unique
 class InvertedIndexFieldAttribute(Enum):
     """InvertedIndexFieldsAttribute"""
     NOT_ANALYZED = "ATTRIBUTE_NOT_ANALYZED"
     ANALYZED = "ATTRIBUTE_ANALYZED"
+
 
 @unique
 class FieldType(Enum):
@@ -150,6 +152,7 @@ class ServerErrCode(Enum):
     """
     INTERNAL_ERROR = 1
     INVALID_PARAMETER = 2
+    TIMEOUT = 3
 
     INVALID_HTTP_URL = 10
     INVALID_HTTP_HEADER = 11
@@ -310,3 +313,8 @@ class Lang(Enum):
 class DocSplitMode(Enum):
     PAGE = "PAGE"
     SENTENCE = "SENTENCE"
+
+@unique
+class FilterMode(Enum):
+    AUTO = "AUTO"
+    POST = "POST"
