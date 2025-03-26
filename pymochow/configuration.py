@@ -38,7 +38,8 @@ class Configuration(object):
                  backup_endpoint=None,
                  proxy_host=None,
                  proxy_port=None,
-                 uri_prefix=None,):
+                 uri_prefix=None,
+                 request_timeout_ms=None):
         """初始化方法，用于创建 Client 实例。
         
         Args:
@@ -54,6 +55,7 @@ class Configuration(object):
             proxy_host (str): http/https 代理主机地址。
             proxy_port (int): http/https 代理端口号。
             uri_prefix(str): appbuilder的gateway的uri前缀
+            request_timeout_ms(int): request的超时时间，单位为毫秒
         
         """
         self.credentials = credentials
@@ -72,6 +74,7 @@ class Configuration(object):
         self.backup_endpoint = compat.convert_to_bytes(backup_endpoint) \
                 if backup_endpoint is not None else backup_endpoint
         self.uri_prefix = uri_prefix
+        self.request_timeout_ms = request_timeout_ms
 
     def merge_non_none_values(self, other):
         """
@@ -79,9 +82,14 @@ class Configuration(object):
         :param other:
         :return:
         """
-        for k, v in iteritems(other.__dict__):
-            if v is not None:
-                self.__dict__[k] = v
+        if (isinstance(other, dict)):
+            for k, v in other.items():
+                if v is not None:
+                    self.__dict__[k] = v
+        else:
+            for k, v in iteritems(other.__dict__):
+                if v is not None:
+                    self.__dict__[k] = v
 
 
 DEFAULT_PROTOCOL = pymochow.protocol.HTTP

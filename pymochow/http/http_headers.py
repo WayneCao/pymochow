@@ -50,6 +50,8 @@ SERVER = b"Server"
 
 USER_AGENT = b"User-Agent"
 
+REQUEST_TIMEOUT_MS = b"Request-Timeout-MS"
+
 # BCE Common HTTP Headers
 
 BCE_PREFIX = b"x-bce-"

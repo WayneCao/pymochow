@@ -316,5 +316,11 @@ class DocSplitMode(Enum):
 
 @unique
 class FilterMode(Enum):
+    """
+    FilterMode: Representing the filter mode of a search.
+
+    AUTO: Represents AUTO filter mode.
+    POST: Represents POST filter mode.
+    """
     AUTO = "AUTO"
     POST = "POST"

@@ -96,8 +96,7 @@ class HTTPClient:
             headers=None, 
             params=None,
             config=None,
-            body_parser=None,
-            ):
+            body_parser=None):
         """send http request
         Args:
             http_method (str): http method
@@ -158,6 +157,9 @@ class HTTPClient:
         should_get_new_date = False
         if http_headers.DATE not in headers:
             should_get_new_date = True
+
+        if config.request_timeout_ms is not None:
+            headers[http_headers.REQUEST_TIMEOUT_MS] = str(config.request_timeout_ms)
 
         request_endpoint = config.endpoint
 
