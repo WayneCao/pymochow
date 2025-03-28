@@ -329,6 +329,48 @@ class TestMochow:
         res = table.vector_search(request=request, projections=["id"])
         logger.debug("multi vector search res: {}".format(res))
 
+    def search_iterator(self):
+        """search iterator"""
+        db = self._client.database('book')
+        table = db.table('book_segments')
+
+        # Example1: search iterator for TopK search.
+        logger.debug("Start search iterator for TopK search")
+        request = VectorTopkSearchRequest(vector_field="vector", vector=FloatVector([1, 0.21, 0.213, 0]),
+                                          limit=1000, config=VectorSearchConfig(ef=2000))
+
+        iterator1 = table.search_iterator(request=request, batch_size=1000, total_size=10000)
+        while True:
+            rows = iterator1.next()
+            if not rows:
+                break
+            logger.debug("rows:{}".format(rows))
+        iterator1.close()
+        logger.debug("Finish search iterator for TopK search")
+
+        # Example2: search iterator for multi-vector search.
+        logger.debug("Start search iterator for multi-vector search")
+        requests = [
+            VectorTopkSearchRequest(vector_field="vector",
+                                    vector=FloatVector([1, 0.21, 0.213, 0]),
+                                    limit=1000,
+                                    config=VectorSearchConfig(ef=2000)),
+            VectorTopkSearchRequest(vector_field="vector",
+                                    vector=FloatVector([1, 0.21, 0.213, 0]),
+                                    limit=1000,
+                                    config=VectorSearchConfig(ef=2000))
+        ]
+        request = MultiVectorSearchRequest(requests=requests,
+                                           ranking=WeightedRank([1.0, 1.0]),
+                                           limit=1000)
+
+        iterator2 = table.search_iterator(request=request, batch_size=1000, total_size=10000)
+        while True:
+            rows = iterator2.next()
+            if not rows:
+                break
+            logger.debug("rows:{}".format(rows))
+        iterator2.close()
 
     def bm25_search(self):
         """bm25 search"""
@@ -582,6 +624,7 @@ if __name__ == "__main__":
     test_vdb.query_data()
     test_vdb.batch_query_data()
     test_vdb.vector_search()
+    test_vdb.search_iterator()
     test_vdb.bm25_search()
     test_vdb.hybrid_search()
     test_vdb.update_data()

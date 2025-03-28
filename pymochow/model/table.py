@@ -933,6 +933,7 @@ class Table:
                 partition_key: Dict[str, Any] = None,
                 projections: List[str] = None,
                 read_consistency: ReadConsistency = ReadConsistency.EVENTUAL,
+                iterated_ids: str = None,
                 config: Dict[Any, Any] = None):
         """internal use only"""
         if not self.conn:
@@ -947,6 +948,11 @@ class Table:
         if projections is not None:
             body["projections"] = projections
         body["readConsistency"] = read_consistency
+
+        # `iterated_ids` is only used by `SearchIterator`.
+        if iterated_ids is not None:
+            body["iteratedIds"] = iterated_ids
+
         json_body = orjson.dumps(body)
 
         config = self._merge_config(config)
@@ -958,6 +964,31 @@ class Table:
                                       body=json_body,
                                       params={req_type: b''},
                                       config=config)
+
+    def search_iterator(self, *,
+                        request: VectorSearchRequest,
+                        batch_size: int,
+                        total_size: int,
+                        partition_key: Dict[str, Any] = None,
+                        projections: List[str] = None,
+                        read_consistency: ReadConsistency = ReadConsistency.EVENTUAL,
+                        config: Dict[Any, Any] = None):
+        """Returns an iterator to get search results in batches. Useful when the
+        number of rows in the result is too large to be retrieved in a single
+        search request.
+
+        Only TopK search and Multi-Vector search is supported.
+
+        Arguments:
+        - `batch_size`: Number of results returned by `iterator.next()`.
+        - `total_size`: Total number of results returned by iterator.
+
+        """
+        return SearchIterator(table=self, rqeust=request, batch_size=batch_size,
+                              total_size=total_size,
+                              partition_key=partition_key,
+                              projections=projections,
+                              read_consistency=read_consistency, config=config)
 
     def delete(self, primary_key=None, partition_key=None, filter=None, config=None):
         """
@@ -1314,6 +1345,86 @@ class Row:
     def to_dict(self):
         """to dict"""
         return self._data
+
+
+class SearchIterator:
+    """
+    SearchIterator
+    """
+
+    def __init__(
+            self, *,
+            table: Table,
+            request: VectorSearchRequest,
+            batch_size: int,
+            total_size: int,
+            partition_key: Dict[str, Any] = None,
+            projections: List[str] = None,
+            read_consistency: ReadConsistency = ReadConsistency.EVENTUAL,
+            config: Dict[Any, Any] = None):
+        """
+        Note: Don't create SearchIterator object by calling this method.
+        Instead, call the `search_iterator` method in `pymochow.model.table.Table`.
+        """
+        if not isinstance(request, (VectorTopkSearchRequest,
+                                    MultiVectorSearchRequest)):
+            raise ValueError(
+                "SearchIterator only supports VectorTopkSearchRequest and MultiVectorSearchRequest")
+
+        if total_size < batch_size:
+            raise ValueError("'total_size' should not be less than 'batch_size'")
+
+        # Requires: batch_size and request._limit should be same.
+        if batch_size != request._limit:
+            raise ValueError("'request.limit' should be equal with 'batch_size'")
+
+        # const variables:
+        self._table = table
+        self._request = request
+        self._batch_size = batch_size
+        self._total_size = total_size
+        self._partition_key = partition_key
+        self._projections = projections
+        self._read_consistency = read_consistency
+        self._config = config
+
+        # variables that are updated after each `next()`:
+        self._returned_count = 0
+        self._iterated_ids = ""
+
+    def next(self):
+        """
+        Return the next batch of search results. The number of returned rows
+        is limited by `batch_size`. It returns None when the iterator finishes.
+        """
+
+        if (self._returned_count >= self._total_size):
+            return None
+
+        res = self._table._search(request=self._request,
+                                  partition_key=self._partition_key,
+                                  projections=self._projections,
+                                  read_consistency=self._read_consistency,
+                                  iterated_ids=self._iterated_ids,
+                                  config=self._config)
+
+        if not res.iterated_ids:
+            raise ClientError("search iterator is not supported")
+
+        # In the final returned batch, the returned size may less than `batch_size`.
+        cnt = min(self._total_size - self._returned_count, len(res.rows))
+        rows = res.rows[:cnt]
+
+        self._iterated_ids = res.iterated_ids
+        self._returned_count += cnt
+
+        return rows
+
+    def close(self):
+        """
+        Close the iterator.
+        """
+        pass
 
 
 @utils.deprecated("Use VectorSearchConfig instead")
