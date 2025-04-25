@@ -36,7 +36,7 @@ from pymochow.model.schema import (
     InvertedIndex,
     InvertedIndexParams,
     RRFRank,
-    WeightedRank
+    WeightedRank,
 )
 from pymochow.model.enum import (
     FieldType, ElementType, IndexType, InvertedIndexAnalyzer, InvertedIndexParseMode, MetricType, ServerErrCode,
@@ -56,7 +56,7 @@ from pymochow.model.table import (
     VectorBatchSearchRequest,
     MultiVectorSearchRequest,
     BM25SearchRequest,
-    HybridSearchRequest
+    HybridSearchRequest,
 )
 
 logging.basicConfig(filename='example.log', level=logging.DEBUG,
@@ -132,7 +132,8 @@ class TestMochow:
         indexes.append(InvertedIndex(index_name="book_segment_inverted_idx",
                                fields=["segment"],
                                params=InvertedIndexParams(analyzer=InvertedIndexAnalyzer.CHINESE_ANALYZER,
-                                                          parse_mode=InvertedIndexParseMode.COARSE_MODE),
+                                                          parse_mode=InvertedIndexParseMode.COARSE_MODE,
+                                                          case_sensitive=True),
                                field_attributes=[InvertedIndexFieldAttribute.ANALYZED]))
         db.create_table(
             table_name=table_name,
@@ -371,6 +372,7 @@ class TestMochow:
                 break
             logger.debug("rows:{}".format(rows))
         iterator2.close()
+        logger.debug("Finish search iterator for multi-vector search")
 
     def bm25_search(self):
         """bm25 search"""
