@@ -435,18 +435,22 @@ class FilteringIndex(IndexField):
 
 class InvertedIndexParams:
     """
-    inverted index params
+    inverted index params.
     """
+
     def __init__(
             self,
-            analyzer: InvertedIndexAnalyzer=None,
-            parse_mode: InvertedIndexParseMode=None):
+            analyzer: InvertedIndexAnalyzer = None,
+            parse_mode: InvertedIndexParseMode = None,
+            case_sensitive: bool = True):
         """init"""
         self._params = {}
         if analyzer is not None:
             self._params["analyzer"] = analyzer
         if parse_mode is not None:
             self._params["parseMode"] = parse_mode
+
+        self._params["analyzerCaseSensitive"] = case_sensitive
 
     def to_dict(self) -> Dict[str, str]:
         """to dict"""

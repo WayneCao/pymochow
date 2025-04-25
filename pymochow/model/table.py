@@ -1432,7 +1432,7 @@ class HNSWSearchParams:
     "hnsw search params"
 
     def __init__(self, ef=None, distance_far=None, distance_near=None, limit=50,
-            pruning=True):
+                 pruning=True):
         self._ef = ef
         self._distance_far = distance_far
         self._distance_near = distance_near
@@ -1451,6 +1451,7 @@ class HNSWSearchParams:
         res['limit'] = self._limit
         res['pruning'] = self._pruning
         return res
+
 
 class HNSWPQSearchParams:
     "hnswpq search params"
