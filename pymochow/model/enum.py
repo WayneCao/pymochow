@@ -93,6 +93,7 @@ class FieldType(Enum):
     TEXT_GBK = "TEXT_GBK"
     TEXT_GB18030 = "TEXT_GB18030"
     ARRAY = "ARRAY"
+    JSON = "JSON"
 
     # vector field type
     FLOAT_VECTOR = "FLOAT_VECTOR"
@@ -188,6 +189,7 @@ class ServerErrCode(Enum):
     TABLE_NOT_READY = 72
     ALIAS_NOT_EXIST = 73
     ALIAS_ALREADY_EXIST = 74
+    TABLE_MEMORY_EXCEED_LIMIT = 75
 
     # Field errors
     FIELD_NOT_EXIST = 80

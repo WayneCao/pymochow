@@ -37,7 +37,7 @@ from pymochow.model.schema import (
     InvertedIndexAnalyzer,
     InvertedIndexParseMode
 )
-from pymochow.model.enum import IndexType, MetricType, TableState
+from pymochow.model.enum import IndexType, MetricType, TableState, RequestType
 
 _logger = logging.getLogger(__name__)
 
@@ -136,7 +136,7 @@ class Database:
         return res
 
     def create_table(self, table_name, replication, partition, schema,
-            enable_dynamic_field=False, description=None, config=None) -> Table:
+            enable_dynamic_field=False, description=None, datanode_memory_reserved_in_gb=0, config=None) -> Table:
         """create table
         Args:
             table_name(str): table name
@@ -145,6 +145,7 @@ class Database:
             schema(Schema): table schema
             enable_dynamic_field(boolean): enable dynamic add field
             description(Optional[str]): table description
+            datanode_memory_reserved_in_gb(Optianl[float]): datanode memory reserved
             config(Optional[Configuration]): client configuration
         Return:
             Table: table
@@ -172,6 +173,9 @@ class Database:
         if description is not None:
             body["description"] = description
 
+        if datanode_memory_reserved_in_gb > 0:
+            body["datanodeMemoryReservedInGB"] = datanode_memory_reserved_in_gb
+
         json_body = orjson.dumps(body)
 
         config = self._merge_config(config)
@@ -192,6 +196,41 @@ class Database:
                 enable_dynamic_field=enable_dynamic_field,
                 description=description,
                 config=self._config)
+    
+    def modify_table(self, table_name, datanode_memory_reserved_in_gb=0, config=None):
+        """
+        modify_table
+        Args:
+            table_name(str): table name
+            datanode_memory_reserved_in_gb(Optianl[float]): datanode memory reserved
+            config(Optional[Configuration]): client configuration
+        """
+        if not self.conn:
+            raise ClientError('conn is closed')
+
+        if not self.database_name:
+            raise ClientError('database name param not found')
+
+        if not table_name:
+            raise ClientError('table name param not found')
+
+        body = {}
+        body["database"] = self.database_name
+        body["table"] = table_name
+
+        if datanode_memory_reserved_in_gb > 0:
+            body["datanodeMemoryReservedInGB"] = datanode_memory_reserved_in_gb
+
+        json_body = orjson.dumps(body)
+
+        config = self._merge_config(config)
+        uri = utils.append_uri(client.URL_PREFIX, client.URL_VERSION, 'table')
+
+        return self.conn.send_request(http_methods.POST,
+                path=uri,
+                body=json_body,
+                params={bytes(RequestType.MODIFY): b''},
+                config=config)
 
     def drop_table(self, table_name, config=None):
         """drop table

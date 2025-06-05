@@ -110,6 +110,7 @@ class TestMochow:
         fields.append(Field("vector", FieldType.FLOAT_VECTOR, not_null=True, dimension=4))
         # 'element_type' must be set for ARRAY, 'max_capacity' is optional
         fields.append(Field("arr_field", FieldType.ARRAY, element_type=ElementType.STRING, not_null=True))
+        fields.append(Field("json_field", FieldType.JSON))
         indexes = []
 
         if self._vector_index_type == IndexType.HNSW:
@@ -151,6 +152,10 @@ class TestMochow:
         time.sleep(10)
         logger.debug("table: {}".format(table.to_dict()))
 
+        db.modify_table(table_name, datanode_memory_reserved_in_gb=0.1)
+        time.sleep(10)
+        logger.debug("table: {}".format(table.to_dict()))
+
     def upsert_data(self):
         """upsert data"""
         db = self._client.database('book')
@@ -163,6 +168,7 @@ class TestMochow:
                 author='吴承恩',
                 page=21,
                 arr_field=[],
+                json_field={},
                 segment='富贵功名，前缘分定，为人切莫欺心。'),
             Row(id='0002',
                 vector=[2, 0.22, 0.213, 0],
@@ -170,6 +176,7 @@ class TestMochow:
                 author='吴承恩',
                 page=22,
                 arr_field=[],
+                json_field={"page": 22},
                 segment='正大光明，忠良善果弥深。些些狂妄天加谴，眼前不遇待时临。'),
             Row(id='0003',
                 vector=[3, 0.23, 0.213, 0],
@@ -177,6 +184,7 @@ class TestMochow:
                 author='罗贯中',
                 page=23,
                 arr_field=["细作", "吕布"],
+                json_field={"author": "罗贯中"},
                 segment='细作探知这个消息，飞报吕布。'),
             Row(id='0004',
                 vector=[4, 0.24, 0.213, 0],
@@ -184,6 +192,7 @@ class TestMochow:
                 author='罗贯中',
                 page=24,
                 arr_field=["吕布", "陈宫", "刘玄德"],
+                json_field={"bookName": "三国演义"},
                 segment='布大惊，与陈宫商议。宫曰：“闻刘玄德新领徐州，可往投之。”' \
                         '布从其言，竟投徐州来。有人报知玄德。'),
             Row(id='0005',
@@ -192,6 +201,15 @@ class TestMochow:
                 author='罗贯中',
                 page=25,
                 arr_field=["玄德", "糜竺", "吕布"],
+                json_field={
+                    "product_info": {
+                        "category": "electronics",
+                        "brand": "BrandA"
+                    },
+                    "price": 99.99,
+                    "in_stock": True,
+                    "tags": ["summer_sale", "clearance"]
+                },
                 segment='玄德曰：“布乃当今英勇之士，可出迎之。”' \
                 '糜竺曰：“吕布乃虎狼之徒，不可收留；收则伤人矣。'),
         ]
@@ -416,7 +434,7 @@ class TestMochow:
         """select data"""
         db = self._client.database('book')
         table = db.table('book_segments')
-        projections = ["id", "bookName"]
+        projections = ["id", "bookName", "json_field"]
 
         select_finished = False
         marker = None
