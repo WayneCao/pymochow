@@ -31,6 +31,9 @@ from pymochow.model.schema import (
     HNSWParams,
     HNSWPQParams,
     PUCKParams,
+    DISKANNParams,
+    IVFParams,
+    IVFSQParams,
     AutoBuildTool,
     InvertedIndex,
     InvertedIndexParams,
@@ -196,7 +199,7 @@ class Database:
                 enable_dynamic_field=enable_dynamic_field,
                 description=description,
                 config=self._config)
-    
+
     def modify_table(self, table_name, datanode_memory_reserved_in_gb=0, config=None):
         """
         modify_table
@@ -231,7 +234,7 @@ class Database:
                 body=json_body,
                 params={bytes(RequestType.MODIFY): b''},
                 config=config)
-
+    
     def drop_table(self, table_name, config=None):
         """drop table
         Args:
@@ -310,7 +313,20 @@ class Database:
                 dimension=(
                     field["dimension"]
                     if "dimension" in field else 0
-                )))
+                ),
+                element_type=(
+                    field["elementType"]
+                    if "elementType" in field else None
+                ),
+                key_type=(
+                    field["keyType"]
+                    if "keyType" in field else None
+                ),
+                value_type=(
+                    field["valueType"]
+                    if "valueType" in field else None
+                )
+            ))
 
         indexes = []
         for index in table["schema"]["indexes"]:
@@ -337,6 +353,36 @@ class Database:
                         efconstruction=index["params"]["efConstruction"],
                         NSQ=index["params"]["NSQ"],
                         samplerate=index["params"]["sampleRate"]),
+                    auto_build=index["autoBuild"],
+                    auto_build_index_policy=auto_build_index_policy))
+            elif index["indexType"] == IndexType.DISKANN.value:
+                indexes.append(VectorIndex(
+                    index_name=index["indexName"],
+                    index_type=IndexType.DISKANN,
+                    field=index["field"],
+                    metric_type=getattr(MetricType, index["metricType"], None),
+                    params=DISKANNParams(NSQ=index["params"]["NSQ"],
+                        R=index["params"]["R"],
+                        L=index["params"]["L"]),
+                    auto_build=index["autoBuild"],
+                    auto_build_index_policy=auto_build_index_policy))
+            elif index["indexType"] == IndexType.IVF.value:
+                indexes.append(VectorIndex(
+                    index_name=index["indexName"],
+                    index_type=IndexType.IVF,
+                    field=index["field"],
+                    metric_type=getattr(MetricType, index["metricType"], None),
+                    params=IVFParams(nlist=index["params"]["nlist"]),
+                    auto_build=index["autoBuild"],
+                    auto_build_index_policy=auto_build_index_policy))
+            elif index["indexType"] == IndexType.IVFSQ.value:
+                indexes.append(VectorIndex(
+                    index_name=index["indexName"],
+                    index_type=IndexType.IVFSQ,
+                    field=index["field"],
+                    metric_type=getattr(MetricType, index["metricType"], None),
+                    params=IVFSQParams(nlist=index["params"]["nlist"],
+                        qtBits=index["params"]["qtBits"]),
                     auto_build=index["autoBuild"],
                     auto_build_index_policy=auto_build_index_policy))
             elif index["indexType"] == IndexType.FLAT.value:

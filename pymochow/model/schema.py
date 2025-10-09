@@ -125,10 +125,13 @@ class Field:
             not_null=False,
             dimension=0,
             element_type=None,
-            max_capacity=None):
+            max_capacity=None,
+            key_type=None,
+            value_type=None):
         """
         - 'dimension' is for FLOAT_VECTOR
         - 'element_type' and 'max_capacity' is for ARRAY
+        - 'key_type' and 'value_type' is for MAP
         """
         self._field_name = field_name
         self._field_type = field_type
@@ -139,6 +142,8 @@ class Field:
         self._dimension = dimension
         self._element_type = element_type
         self._max_capacity = max_capacity
+        self._key_type = key_type
+        self._value_type = value_type
 
     @property
     def field_name(self):
@@ -185,6 +190,16 @@ class Field:
         """max capacity"""
         return self._max_capacity
 
+    @property
+    def key_type(self):
+        """key type"""
+        return self._key_type
+
+    @property
+    def value_type(self):
+        """value type"""
+        return self._value_type
+
     def to_dict(self):
         """to dict"""
         res = {
@@ -204,6 +219,10 @@ class Field:
             res["elementType"] = self.element_type
         if self.max_capacity is not None:
             res["maxCapacity"] = self.max_capacity
+        if self._key_type is not None:
+            res["keyType"] = self.key_type
+        if self._value_type is not None:
+            res["valueType"] = self._value_type
         return res
 
 
@@ -271,6 +290,26 @@ class HNSWPQParams:
         return res
 
 
+class DISKANNParams:
+    """
+    The diskann vector index params.
+    """
+
+    def __init__(self, NSQ: int, R: int, L: int) -> None:
+        self.NSQ = NSQ
+        self.R = R
+        self.L = L
+
+    def to_dict(self):
+        """to dict"""
+        res = {
+            "NSQ": self.NSQ,
+            "R": self.R,
+            "L": self.L
+        }
+        return res
+
+
 class PUCKParams:
     """
     The puck vector index params.
@@ -288,7 +327,41 @@ class PUCKParams:
         }
         return res
 
-    
+
+class IVFParams:
+    """
+    The ivf vector index params.
+    """
+
+    def __init__(self, nlist: int) -> None:
+        self.nlist = nlist
+
+    def to_dict(self):
+        """to dict"""
+        res = {
+            "nlist": self.nlist
+        }
+        return res
+
+
+class IVFSQParams:
+    """
+    The ivfsq vector index params.
+    """
+
+    def __init__(self, nlist: int, qtBits: int) -> None:
+        self.nlist = nlist
+        self.qtBits = qtBits
+
+    def to_dict(self):
+        """to dict"""
+        res = {
+            "nlist": self.nlist,
+            "qtBits": self.qtBits
+        }
+        return res
+
+
 class VectorIndex(IndexField):
     """
     Args:

@@ -28,6 +28,9 @@ from pymochow.model.schema import (
     HNSWParams,
     HNSWPQParams,
     PUCKParams,
+    DISKANNParams,
+    IVFParams,
+    IVFSQParams,
     DefaultAutoBuildPolicy,
     AutoBuildTool,
     InvertedIndex,
@@ -243,20 +246,28 @@ class VectorSearchConfig:
     | HNSW      | ef, pruning         |
     | HNSWPQ    | ef, pruning         |
     | PUCK      | search_coarse_count |
+    | IVF       | nprobe              |
+    | IVFSQ     | nprobe              |
     | FLAT      |                     |
-
+    | DISKANN   | w, search_l         |
     """
 
     def __init__(self, *,
                  ef: int = None,
                  pruning: bool = None,
                  search_coarse_count: int = None,
+                 w: int = None,
+                 search_l: int = None,
+                 nprobe: int = None,
                  filter_mode: FilterMode = FilterMode.AUTO,
                  post_filter_amplification_factor: float = None):
         """init"""
         self._ef = ef
         self._pruning = pruning
         self._search_coarse_count = search_coarse_count
+        self._w = w
+        self._search_l = search_l
+        self._nprobe = nprobe
         self._filter_mode = filter_mode
         self._post_filter_amplification_factor = post_filter_amplification_factor
 
@@ -269,6 +280,12 @@ class VectorSearchConfig:
             res['pruning'] = self._pruning
         if self._search_coarse_count is not None:
             res['searchCoarseCount'] = self._search_coarse_count
+        if self._w is not None:
+            res['W'] = self._w
+        if self._search_l is not None:
+            res['searchL'] = self._search_l
+        if self._nprobe is not None:
+            res['nprobe'] = self._nprobe
         if self._filter_mode is not None:
             res['filterMode'] = self._filter_mode
         if self._post_filter_amplification_factor is not None:
@@ -296,6 +313,7 @@ class VectorTopkSearchRequest(SearchRequest):
                  vector_field: str,
                  vector: Vector = None,
                  limit: int = 50,
+                 offset: int = None,
                  filter: str = None,
                  config: VectorSearchConfig = None,
                  advanced_options: AdvancedOptions = None):
@@ -303,6 +321,8 @@ class VectorTopkSearchRequest(SearchRequest):
         self._vector_field = vector_field
         self._vector = vector
         self._limit = limit
+        self._offset = offset
+
         self._filter = filter
         self._config = config
         self._advanced_options = advanced_options
@@ -347,6 +367,9 @@ class VectorTopkSearchRequest(SearchRequest):
         if self._advanced_options is not None:
             res["advancedOptions"] = self._advanced_options.to_dict()
 
+        if self._offset is not None:
+            res["offset"] = self._offset
+
         return res
 
     def type(self):
@@ -361,7 +384,9 @@ class VectorRangeSearchRequest(SearchRequest):
                  distance_range: Tuple[float, float],
                  vector: Vector = None,
                  limit: int = None,
+                 offset: int = None,
                  filter: str = None,
+                 advanced_options: AdvancedOptions = None,
                  config: VectorSearchConfig = None):
         """init"""
         self._vector_field = vector_field
@@ -369,7 +394,9 @@ class VectorRangeSearchRequest(SearchRequest):
         self._distance_near = distance_range[0]
         self._distance_far = distance_range[1]
         self._limit = limit
+        self._offset = offset
         self._filter = filter
+        self._advanced_options = advanced_options
         self._config = config
     
     @property
@@ -412,6 +439,12 @@ class VectorRangeSearchRequest(SearchRequest):
             anns["params"] = params
         res["anns"] = anns
 
+        if self._advanced_options is not None:
+            res["advancedOptions"] = self._advanced_options.to_dict()
+
+        if self._offset is not None:
+            res["offset"] = self._offset
+
         return res
 
     def type(self):
@@ -430,6 +463,7 @@ class MultiVectorSearchRequest(SearchRequest):
                  requests: List[SingleVectorSearchRequest],
                  ranking: FusionRankPolicy,
                  limit: int = None,
+                 offset: int = None,
                  filter: str = None):
         """init
         Each subrequest in 'requests' could set its own 'limit'.
@@ -442,6 +476,7 @@ class MultiVectorSearchRequest(SearchRequest):
         self._requests = requests
         self._ranking = ranking
         self._limit = limit
+        self._offset = offset
         self._filter = filter
 
     def to_dict(self):
@@ -456,6 +491,8 @@ class MultiVectorSearchRequest(SearchRequest):
             res["limit"] = self._limit
         if self._ranking is not None:
             res["ranking"] = self._ranking.to_dict()
+        if self._offset is not None:
+            res["offset"] = self._offset
 
         return res
 
@@ -471,17 +508,23 @@ class VectorBatchSearchRequest(SearchRequest):
                  vector_field: str,
                  vectors: List[Vector] = None,
                  limit: int = None,
+                 offset: int = None,
                  distance_range: Tuple[float, float] = None,
                  filter: str = None,
+                 merge_batch_result: bool = None,
+                 advanced_options: AdvancedOptions = None,
                  config: VectorSearchConfig = None):
         """init"""
         self._vector_field = vector_field
         self._vectors = vectors
         self._config = config
         self._limit = limit
+        self._offset = offset
         self._distance_range = distance_range
         self._filter = filter
-    
+        self._merge_batch_result = merge_batch_result
+        self._advanced_options = advanced_options
+
     @property
     def vectors(self):
         """get vectors"""
@@ -521,6 +564,16 @@ class VectorBatchSearchRequest(SearchRequest):
             anns["params"] = params
 
         res["anns"] = anns
+
+        if self._merge_batch_result is not None:
+            res["mergeBatchResult"] = self._merge_batch_result
+
+        if self._offset is not None:
+            res["offset"] = self._offset
+
+        if self._advanced_options is not None:
+            res["advancedOptions"] = self._advanced_options.to_dict()
+
         return res
 
     def type(self):
@@ -1269,6 +1322,26 @@ class Table:
                 auto_build=index["autoBuild"],
                 auto_build_index_policy=auto_build_index_policy,
                 state=getattr(IndexState, index["state"], None))
+        elif index["indexType"] == IndexType.IVF.value:
+            return VectorIndex(
+                index_name=index["indexName"],
+                index_type=IndexType.IVF,
+                field=index["field"],
+                metric_type=getattr(MetricType, index["metricType"], None),
+                params=IVFParams(nlist=index["params"]["nlist"]),
+                auto_build=index["autoBuild"],
+                auto_build_index_policy=auto_build_index_policy,
+                state=getattr(IndexState, index["state"], None))
+        elif index["indexType"] == IndexType.IVFSQ.value:
+            return VectorIndex(
+                index_name=index["indexName"],
+                index_type=IndexType.IVFSQ,
+                field=index["field"],
+                metric_type=getattr(MetricType, index["metricType"], None),
+                params=IVFSQParams(nlist=index["params"]["nlist"], qtBits=index["params"]["qtBits"]),
+                auto_build=index["autoBuild"],
+                auto_build_index_policy=auto_build_index_policy,
+                state=getattr(IndexState, index["state"], None))
         elif index["indexType"] == IndexType.FLAT.value:
             return VectorIndex(
                 index_name=index["indexName"],
@@ -1286,6 +1359,17 @@ class Table:
                 metric_type=getattr(MetricType, index["metricType"], None),
                 params=PUCKParams(coarseClusterCount=index["params"]["coarseClusterCount"],
                         fineClusterCount=index["params"]["fineClusterCount"]),
+                auto_build=index["autoBuild"],
+                auto_build_index_policy=auto_build_index_policy,
+                state=getattr(IndexState, index["state"], None))
+        elif index["indexType"] == IndexType.DISKANN.value:
+            return VectorIndex(
+                index_name=index["indexName"],
+                index_type=IndexType.DISKANN,
+                field=index["field"],
+                metric_type=getattr(MetricType, index["metricType"], None),
+                params=DISKANNParams(NSQ=index["params"]["NSQ"],
+                        R=index["params"]["R"],L=index["params"]["L"]),
                 auto_build=index["autoBuild"],
                 auto_build_index_policy=auto_build_index_policy,
                 state=getattr(IndexState, index["state"], None))
