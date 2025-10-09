@@ -35,6 +35,9 @@ class IndexType(Enum):
     PUCK = "PUCK"
     HNSWPQ = "HNSWPQ"
     SPARSE_OPTIMIZED_FLAT = "SPARSE_OPTIMIZED_FLAT"
+    DISKANN = "DISKANN"
+    IVF = "IVF"
+    IVFSQ = "IVFSQ"
 
     # scalar index type
     SECONDARY_INDEX = "SECONDARY"
@@ -94,6 +97,7 @@ class FieldType(Enum):
     TEXT_GB18030 = "TEXT_GB18030"
     ARRAY = "ARRAY"
     JSON = "JSON"
+    MAP = "MAP"
 
     # vector field type
     FLOAT_VECTOR = "FLOAT_VECTOR"
@@ -127,7 +131,65 @@ class ElementType(Enum):
     TEXT = "TEXT"
     TEXT_GBK = "TEXT_GBK"
     TEXT_GB18030 = "TEXT_GB18030"
+    FLOAT_VECTOR = "FLOAT_VECTOR"
 
+
+@unique
+class MapKeyType(Enum):
+    """
+    Field type
+    """
+    # scalar field type
+    BOOL = "BOOL"
+    INT8 = "INT8"
+    UINT8 = "UINT8"
+    INT16 = "INT16"
+    UINT16 = "UINT16"
+    INT32 = "INT32"
+    UINT32 = "UINT32"
+    INT64 = "INT64"
+    UINT64 = "UINT64"
+    FLOAT = "FLOAT"
+    DOUBLE = "DOUBLE"
+    DATE = "DATE"
+    DATETIME = "DATETIME"
+    TIMESTAMP = "TIMESTAMP"
+    STRING = "STRING"
+    BINARY = "BINARY"
+    UUID = "UUID"
+    TEXT = "TEXT"
+    TEXT_GBK = "TEXT_GBK"
+    TEXT_GB18030 = "TEXT_GB18030"
+
+
+@unique
+class MapValueType(Enum):
+    """
+    Field type
+    """
+    # scalar field type
+    BOOL = "BOOL"
+    INT8 = "INT8"
+    UINT8 = "UINT8"
+    INT16 = "INT16"
+    UINT16 = "UINT16"
+    INT32 = "INT32"
+    UINT32 = "UINT32"
+    INT64 = "INT64"
+    UINT64 = "UINT64"
+    FLOAT = "FLOAT"
+    DOUBLE = "DOUBLE"
+    DATE = "DATE"
+    DATETIME = "DATETIME"
+    TIMESTAMP = "TIMESTAMP"
+    STRING = "STRING"
+    BINARY = "BINARY"
+    UUID = "UUID"
+    TEXT = "TEXT"
+    TEXT_GBK = "TEXT_GBK"
+    TEXT_GB18030 = "TEXT_GB18030"
+    FLOAT_VECTOR = "FLOAT_VECTOR"
+    ARRAY = "ARRAY"
 
 @unique
 class PartitionType(Enum):
@@ -326,3 +388,4 @@ class FilterMode(Enum):
     """
     AUTO = "AUTO"
     POST = "POST"
+

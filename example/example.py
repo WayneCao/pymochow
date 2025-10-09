@@ -32,6 +32,7 @@ from pymochow.model.schema import (
     HNSWParams,
     HNSWPQParams,
     PUCKParams,
+    DISKANNParams,
     AutoBuildTiming,
     InvertedIndex,
     InvertedIndexParams,
@@ -125,6 +126,10 @@ class TestMochow:
             indexes.append(VectorIndex(index_name="vector_idx", index_type=IndexType.PUCK,
             field="vector", metric_type=MetricType.L2, 
             params=PUCKParams(coarseClusterCount=5, fineClusterCount=5)))
+        elif self._vector_index_type == IndexType.DISKANN:
+            indexes.append(VectorIndex(index_name="vector_idx", index_type=IndexType.DISKANN,
+            field="vector", metric_type=MetricType.L2, 
+            params=DISKANNParams(NSQ=4, R=64, L=100)))
         else:
             raise Exception("not support index type")
 
@@ -292,6 +297,10 @@ class TestMochow:
             request = VectorTopkSearchRequest(vector_field="vector", vector=FloatVector([1, 0.21, 0.213, 0]),
                                               limit=5, filter="bookName='三国演义'",
                                               config=VectorSearchConfig(search_coarse_count=5))
+        elif self._vector_index_type == IndexType.DISKANN:
+            request = VectorTopkSearchRequest(vector_field="vector", vector=FloatVector([1, 0.21, 0.213, 0]),
+                                              limit=10, filter="bookName='三国演义'",
+                                              config=VectorSearchConfig(w=1, search_l=100))
         res = table.vector_search(request=request)
         logger.debug("topk search res: {}".format(res))
 
@@ -321,6 +330,12 @@ class TestMochow:
                                                         FloatVector([1, 0.32, 0.513, 0])],
                                                limit=5, filter="bookName='三国演义'",
                                                config=VectorSearchConfig(search_coarse_count=5))
+        elif self._vector_index_type == IndexType.DISKANN:
+            request = VectorBatchSearchRequest(vector_field="vector",
+                                               vectors=[FloatVector([1, 0.21, 0.213, 0]),
+                                                        FloatVector([1, 0.32, 0.513, 0])],
+                                               limit=10, filter="bookName='三国演义'",
+                                               config=VectorSearchConfig(w=1, search_l=100))
         res = table.vector_search(request=request)
         logger.debug("batch search res: {}".format(res))
 
@@ -329,6 +344,8 @@ class TestMochow:
             config=VectorSearchConfig(ef=200)
         elif self._vector_index_type == IndexType.PUCK:
             config=VectorSearchConfig(search_coarse_count=5)
+        elif self._vector_index_type == IndexType.DISKANN:
+            config=VectorSearchConfig(w=1, search_l=100)
 
         # in real world senario, you should use vectors in different vector fields
         requests = [
@@ -349,6 +366,8 @@ class TestMochow:
         logger.debug("multi vector search res: {}".format(res))
 
     def search_iterator(self):
+        if self._vector_index_type != IndexType.HNSW or self._vector_index_type != IndexType.HNSWPQ:
+            return
         """search iterator"""
         db = self._client.database('book')
         table = db.table('book_segments')
@@ -413,9 +432,11 @@ class TestMochow:
             config = VectorSearchConfig(ef=200)
         elif self._vector_index_type == IndexType.PUCK:
             config = VectorSearchConfig(search_coarse_count=5)
+        elif self._vector_index_type == IndexType.DISKANN:
+            config=VectorSearchConfig(w=1, search_l=100)
         vector_request = VectorTopkSearchRequest(vector_field="vector",
                                                  vector=FloatVector([1, 0.21, 0.213, 0]),
-                                                 limit=None,
+                                                 limit=10,
                                                  config=config)
         bm25_request = BM25SearchRequest(index_name="book_segment_inverted_idx",
                                          search_text="吕布")
@@ -497,6 +518,10 @@ class TestMochow:
             indexes.append(VectorIndex(index_name="vector_idx", index_type=IndexType.PUCK,
             field="vector", metric_type=MetricType.L2, 
             params=PUCKParams(coarseClusterCount=5, fineClusterCount=5), auto_build=False))
+        elif self._vector_index_type == IndexType.DISKANN:
+            indexes.append(VectorIndex(index_name="vector_idx", index_type=IndexType.DISKANN,
+            field="vector", metric_type=MetricType.L2, 
+            params=DISKANNParams(NSQ=4, R=64, L=100)))
         else:
             raise Exception("not support index type")
         table.create_indexes(indexes)
@@ -634,7 +659,7 @@ if __name__ == "__main__":
 
     config = Configuration(credentials=BceCredentials(account, api_key),
             endpoint=endpoint)
-    test_vdb = TestMochow(config, IndexType.HNSWPQ)
+    test_vdb = TestMochow(config, IndexType.DISKANN)
     test_vdb.clear()
     test_vdb.create_db_and_table()
     test_vdb.upsert_data()
