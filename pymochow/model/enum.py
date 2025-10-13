@@ -38,6 +38,7 @@ class IndexType(Enum):
     DISKANN = "DISKANN"
     IVF = "IVF"
     IVFSQ = "IVFSQ"
+    HNSWSQ = "HNSWSQ"
 
     # scalar index type
     SECONDARY_INDEX = "SECONDARY"

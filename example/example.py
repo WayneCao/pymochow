@@ -31,6 +31,7 @@ from pymochow.model.schema import (
     VectorIndex,
     HNSWParams,
     HNSWPQParams,
+    HNSWSQParams,
     PUCKParams,
     DISKANNParams,
     AutoBuildTiming,
@@ -130,6 +131,10 @@ class TestMochow:
             indexes.append(VectorIndex(index_name="vector_idx", index_type=IndexType.DISKANN,
             field="vector", metric_type=MetricType.L2, 
             params=DISKANNParams(NSQ=4, R=64, L=100)))
+        elif self._vector_index_type == IndexType.HNSWSQ:
+            indexes.append(VectorIndex(index_name="vector_idx", index_type=IndexType.HNSWSQ,
+            field="vector", metric_type=MetricType.IP, 
+            params=HNSWSQParams(m=16, efconstruction=200, qtBits=8)))
         else:
             raise Exception("not support index type")
 
@@ -289,10 +294,14 @@ class TestMochow:
                 break
 
         # single topk search
-        if self._vector_index_type == IndexType.HNSW or self._vector_index_type == IndexType.HNSWPQ:
+        if self._vector_index_type == IndexType.HNSW:
             request = VectorTopkSearchRequest(vector_field="vector", vector=FloatVector([1, 0.21, 0.213, 0]),
                                               limit=10, filter="bookName='三国演义'",
-                                              config=VectorSearchConfig(ef=200))
+                                              config=VectorSearchConfig(ef=200, pruning=True))
+        elif self._vector_index_type == IndexType.HNSWPQ:
+            request = VectorTopkSearchRequest(vector_field="vector", vector=FloatVector([1, 0.21, 0.213, 0]),
+                                              limit=10, filter="bookName='三国演义'",
+                                              config=VectorSearchConfig(ef=200)) 
         elif self._vector_index_type == IndexType.PUCK:
             request = VectorTopkSearchRequest(vector_field="vector", vector=FloatVector([1, 0.21, 0.213, 0]),
                                               limit=5, filter="bookName='三国演义'",
@@ -301,24 +310,40 @@ class TestMochow:
             request = VectorTopkSearchRequest(vector_field="vector", vector=FloatVector([1, 0.21, 0.213, 0]),
                                               limit=10, filter="bookName='三国演义'",
                                               config=VectorSearchConfig(w=1, search_l=100))
+        elif self._vector_index_type == IndexType.HNSWSQ:
+            request = VectorTopkSearchRequest(vector_field="vector", vector=FloatVector([1, 0.21, 0.213, 0]),
+                                              limit=10, filter="bookName='三国演义'",
+                                              config=VectorSearchConfig(ef=200))
         res = table.vector_search(request=request)
         logger.debug("topk search res: {}".format(res))
 
         # single range search
-        if self._vector_index_type == IndexType.HNSW or self._vector_index_type == IndexType.HNSWPQ:
+        if self._vector_index_type == IndexType.HNSW:
+            request = VectorRangeSearchRequest(vector_field="vector", vector=FloatVector([1, 0.21, 0.213, 0]),
+                                               distance_range=(0, 20), limit=10,
+                                               filter="bookName='三国演义'",
+                                               config=VectorSearchConfig(ef=200, pruning=True))
+        elif self._vector_index_type == IndexType.HNSWPQ:
             request = VectorRangeSearchRequest(vector_field="vector", vector=FloatVector([1, 0.21, 0.213, 0]),
                                                distance_range=(0, 20), limit=10,
                                                filter="bookName='三国演义'",
                                                config=VectorSearchConfig(ef=200))
-        elif self._vector_index_type == IndexType.PUCK:
+        elif self._vector_index_type == IndexType.HNSWSQ:
             request = VectorRangeSearchRequest(vector_field="vector", vector=FloatVector([1, 0.21, 0.213, 0]),
-                                               distance_range=(0, 20), limit=5,
-                                               config=VectorSearchConfig(search_coarse_count=5))
+                                               distance_range=(0, 20), limit=10,
+                                               filter="bookName='三国演义'",
+                                               config=VectorSearchConfig(ef=200))
         res = table.vector_search(request=request)
         logger.debug("range search res: {}".format(res))
 
         # batch search
-        if self._vector_index_type == IndexType.HNSW or self._vector_index_type == IndexType.HNSWPQ:
+        if self._vector_index_type == IndexType.HNSW:
+            request = VectorBatchSearchRequest(vector_field="vector",
+                                               vectors=[FloatVector([1, 0.21, 0.213, 0]),
+                                                        FloatVector([1, 0.32, 0.513, 0])],
+                                               limit=10, filter="bookName='三国演义'",
+                                               config=VectorSearchConfig(ef=200, pruning=True))
+        elif self._vector_index_type == IndexType.HNSWPQ:
             request = VectorBatchSearchRequest(vector_field="vector",
                                                vectors=[FloatVector([1, 0.21, 0.213, 0]),
                                                         FloatVector([1, 0.32, 0.513, 0])],
@@ -336,16 +361,26 @@ class TestMochow:
                                                         FloatVector([1, 0.32, 0.513, 0])],
                                                limit=10, filter="bookName='三国演义'",
                                                config=VectorSearchConfig(w=1, search_l=100))
+        elif self._vector_index_type == IndexType.HNSWSQ:
+            request = VectorBatchSearchRequest(vector_field="vector",
+                                               vectors=[FloatVector([1, 0.21, 0.213, 0]),
+                                                        FloatVector([1, 0.32, 0.513, 0])],
+                                               limit=10, filter="bookName='三国演义'",
+                                               config=VectorSearchConfig(ef=200))
         res = table.vector_search(request=request)
         logger.debug("batch search res: {}".format(res))
 
         # multi-vector search
-        if self._vector_index_type == IndexType.HNSW or self._vector_index_type == IndexType.HNSWPQ:
+        if self._vector_index_type == IndexType.HNSW:
+            config=VectorSearchConfig(ef=200, pruning=True)
+        elif self._vector_index_type == IndexType.HNSWPQ:
             config=VectorSearchConfig(ef=200)
         elif self._vector_index_type == IndexType.PUCK:
             config=VectorSearchConfig(search_coarse_count=5)
         elif self._vector_index_type == IndexType.DISKANN:
             config=VectorSearchConfig(w=1, search_l=100)
+        elif self._vector_index_type == IndexType.HNSWSQ:
+            config=VectorSearchConfig(ef=200)
 
         # in real world senario, you should use vectors in different vector fields
         requests = [
@@ -367,6 +402,7 @@ class TestMochow:
 
     def search_iterator(self):
         if self._vector_index_type != IndexType.HNSW or self._vector_index_type != IndexType.HNSWPQ:
+            logger.debug("Search iterator test only support HNSW and HNSWPQ now!")
             return
         """search iterator"""
         db = self._client.database('book')
@@ -428,12 +464,16 @@ class TestMochow:
         db = self._client.database('book')
         table = db.table('book_segments')
 
-        if self._vector_index_type == IndexType.HNSW or self._vector_index_type == IndexType.HNSWPQ:
+        if self._vector_index_type == IndexType.HNSW:
+            config = VectorSearchConfig(ef=200, pruning=True)
+        elif self._vector_index_type == IndexType.HNSWPQ:
             config = VectorSearchConfig(ef=200)
         elif self._vector_index_type == IndexType.PUCK:
             config = VectorSearchConfig(search_coarse_count=5)
         elif self._vector_index_type == IndexType.DISKANN:
             config=VectorSearchConfig(w=1, search_l=100)
+        elif self._vector_index_type == IndexType.HNSWSQ:
+            config = VectorSearchConfig(ef=200)
         vector_request = VectorTopkSearchRequest(vector_field="vector",
                                                  vector=FloatVector([1, 0.21, 0.213, 0]),
                                                  limit=10,
@@ -522,6 +562,10 @@ class TestMochow:
             indexes.append(VectorIndex(index_name="vector_idx", index_type=IndexType.DISKANN,
             field="vector", metric_type=MetricType.L2, 
             params=DISKANNParams(NSQ=4, R=64, L=100)))
+        elif self._vector_index_type == IndexType.HNSWSQ:
+            indexes.append(VectorIndex(index_name="vector_idx", index_type=IndexType.HNSWSQ,
+            field="vector", metric_type=MetricType.L2, 
+            params=HNSWSQParams(m=16, efconstruction=200, qtBits=8)))
         else:
             raise Exception("not support index type")
         table.create_indexes(indexes)
@@ -659,7 +703,7 @@ if __name__ == "__main__":
 
     config = Configuration(credentials=BceCredentials(account, api_key),
             endpoint=endpoint)
-    test_vdb = TestMochow(config, IndexType.DISKANN)
+    test_vdb = TestMochow(config, IndexType.HNSW)
     test_vdb.clear()
     test_vdb.create_db_and_table()
     test_vdb.upsert_data()
