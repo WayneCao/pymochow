@@ -310,6 +310,26 @@ class DISKANNParams:
         return res
 
 
+class HNSWSQParams:
+    """
+    The hnsw sq vector index params.
+    """
+
+    def __init__(self, m: int, efconstruction: int, qtBits: int) -> None:
+        self.m = m
+        self.ef_construction = efconstruction
+        self.qtBits = qtBits
+    
+    def to_dict(self):
+        """to dict"""
+        res = {
+            "M": self.m,
+            "efConstruction": self.ef_construction,
+            "qtBits": self.qtBits
+        }
+        return res
+
+
 class PUCKParams:
     """
     The puck vector index params.
